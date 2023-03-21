@@ -91,3 +91,31 @@ def show_data(cursor,selected_table,tables):
         st.write(pd.DataFrame(rows, columns=col_names).head())
     return col_names
 
+
+def list_convertin(selected_columns):
+    selected_columns_out = str(selected_columns)
+    selected_columns_out = selected_columns_out.replace("[","")
+    selected_columns_out = selected_columns_out.replace("]","")
+    selected_columns_out = selected_columns_out.replace("'","")
+    return selected_columns_out
+
+def generate_query_fun(selected_agg,selected_table,cursor,options_out,metrics_out,groupby_col_out):
+    if selected_agg == "GROUP BY":
+        output_query = f"SELECT {metrics_out} FROM {selected_table} GROUP BY {groupby_col_out} LIMIT 100  OFFSET 0;"      
+    else:
+        output_query = f"SELECT {options_out} FROM {selected_table}  LIMIT 100  OFFSET 0;"
+    st.code(output_query,language='sql')
+    cursor.execute(output_query)
+    rows = cursor.fetchall()
+    st.write(f":green[Showing data from {selected_table} table]")
+    st.write(pd.DataFrame(rows, columns=[f"{options_out}"][0].split(",")))
+
+def user_query_fun(cursor,tables):
+    sql_query = st.sidebar.text_area("Enter your own SQL Query")
+    st.write(f":red[WRITE A SQL QUERY ON {tables}]")
+    cursor.execute(sql_query)
+    rows = cursor.fetchall()
+    st.write(f":green[Showing data from {tables} table]")
+    column_name =  [col[0] for col in cursor.description]
+    st.write(pd.DataFrame(rows,columns=column_name))
+
