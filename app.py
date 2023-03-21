@@ -65,21 +65,50 @@ def main():
             connection, message = connect_func(host, port, db_name, username, password)
             cursor,tables = show_tables(connection,message,selected_db)
             # Create a dropdown to select a table
-            selected_table = st.selectbox(":red[Select a table]",['select a table']+tables)
+            selected_table = st.selectbox(":red[Select a table]",tables)
             if selected_table != "Select a table":
                 col_names = show_data(cursor, selected_table, tables)
-                selected_column = st.multiselect(":red[Select a column]",['Select a column']+col_names)
+                selected_column = st.multiselect(":red[Select a column]",col_names)
                 if selected_column != "Select a column":
-                    selected_agg = st.selectbox(":red[Select an aggregation function]", ["select a function"]+["COUNT","SUM", "AVG", "MIN", "MAX"])
-                    if selected_agg != "None":
-                        agg_query = agg_options[selected_agg]
-                        query=f"SELECT {agg_query}({selected_column})  FROM {selected_table} LIMIT 100;"
-                        st.write(f":green[Showing {selected_db} query from {selected_table} table]")
-                        st.code(query,language='sql')
-                        cursor.execute(query)
-                        rows = cursor.fetchall()
-                        st.write(f":green[Showing data from {selected_table} table]")
-                        st.write(pd.DataFrame(rows, columns=[f"{selected_agg}({selected_column})"]))
+                   from_qry = f"FROM {selected_table}"
+                selected_agg = st.selectbox(":red[Select an aggregation function]",["GROUP BY", "COUNT", "SUM", "DISTINCT", "MIN", "MAX", "AVG"])
+                if selected_agg == "GROUP BY":
+                    groupby_col = st.multiselect(':red[Choose columns to apply group by]', selected_column)
+                    groupby_col_out = str(groupby_col)
+                    groupby_col_out = groupby_col_out.replace("[","")
+                    groupby_col_out = groupby_col_out.replace("]","")
+                    groupby_col_out = groupby_col_out.replace("'","")
+
+                    metrics = st.selectbox(':red[Choose Metrics]', ( "COUNT", "SUM", "DISTINCT", "MIN", "MAX", "AVG"))
+                    col_metrics = st.multiselect(':red[Choose columns to apply metrics]', selected_column)
+
+                    metrics_out = [f"{metrics}({col}) AS {col}" for col in col_metrics] + list(set(selected_column) - set(col_metrics))
+                    metrics_out = str(metrics_out)
+                    metrics_out = metrics_out.replace("[","")
+                    metrics_out = metrics_out.replace("]","")
+                    metrics_out = metrics_out.replace("'","")
+
+                    output_query = f"SELECT {metrics_out} {from_qry} GROUP BY {groupby_col_out} LIMIT 100  OFFSET 0;"
+                    st.code(output_query,language='sql')
+                    cursor.execute(output_query)
+                    rows = cursor.fetchall()
+                    st.write(f":green[Showing data from {selected_table} table]")
+                    st.write(pd.DataFrame(rows, columns=[f"{metrics_out}"][0].split(",")))
+                else:
+                    #option_col = st.multiselect('Choose columns to apply the method', choose_first_column)
+                    options_out = [f"{selected_agg}({col2}) AS {col2}" for col2 in selected_column]
+                    options_out  = str(options_out)
+                    options_out = options_out.replace("[","")
+                    options_out = options_out.replace("]","")
+                    options_out = options_out.replace("'","")
+
+                    output_query = f"SELECT {options_out} {from_qry} LIMIT 100  OFFSET 0;"
+                    st.code(output_query,language='sql')
+                    cursor.execute(output_query)
+                    rows = cursor.fetchall()
+                    st.write(f":green[Showing data from {selected_table} table]")
+                    st.write(pd.DataFrame(rows, columns=[f"{options_out}"][0].split(",")))
+
             else:
                 st.write(message)      
     elif selected_db=="Excel":
@@ -95,16 +124,44 @@ def main():
             column_names=column_name[0].split(",")
             selected_column = st.multiselect(":red[Select a column]",['Select a column']+column_names)
             if selected_column != "Select a column":
-                    selected_agg = st.selectbox(":red[Select an aggregation function]", ["select a function"]+["COUNT","SUM", "AVG", "MIN", "MAX"])
-                    if selected_agg != "select a function":
-                        agg_query = agg_options[selected_agg]
-                        query=f"SELECT {agg_query}({selected_column[0]})  FROM {tables[0]} LIMIT 100;"
-                        st.write(f":green[Showing {selected_db[0]} query from {tables[0]} table]")
-                        st.code(query,language='sql')
-                        cursor.execute(query)
+                    from_qry = f"FROM {tables[0]}"
+                    selected_agg = st.selectbox(":red[Select an aggregation function]", ["select a function"]+["GROUP BY", "COUNT", "SUM", "DISTINCT", "MIN", "MAX", "AVG"])
+                    if selected_agg == "GROUP BY":
+                        groupby_col = st.multiselect(':red[Choose columns to apply group by]', selected_column)
+                        groupby_col_out = str(groupby_col)
+                        groupby_col_out = groupby_col_out.replace("[","")
+                        groupby_col_out = groupby_col_out.replace("]","")
+                        groupby_col_out = groupby_col_out.replace("'","")
+
+                        metrics = st.selectbox(':red[Choose Metrics]', ( "COUNT", "SUM", "DISTINCT", "MIN", "MAX", "AVG"))
+                        col_metrics = st.multiselect(':red[Choose columns to apply metrics]', selected_column)
+
+                        metrics_out = [f"{metrics}({col}) AS {col}" for col in col_metrics] + list(set(selected_column) - set(col_metrics))
+                        metrics_out = str(metrics_out)
+                        metrics_out = metrics_out.replace("[","")
+                        metrics_out = metrics_out.replace("]","")
+                        metrics_out = metrics_out.replace("'","")
+
+                        output_query = f"SELECT {metrics_out} {from_qry} GROUP BY {groupby_col_out} LIMIT 100  OFFSET 0;"
+                        st.code(output_query,language='sql')
+                        cursor.execute(output_query)
                         rows = cursor.fetchall()
                         st.write(f":green[Showing data from {tables[0]} table]")
-                        st.write(pd.DataFrame(rows, columns=[f"{selected_agg}({selected_column[0]})"]))
+                        st.write(pd.DataFrame(rows, columns=[f"{metrics_out}"][0].split(",")))
+                    else:
+                        #option_col = st.multiselect('Choose columns to apply the method', choose_first_column)
+                        options_out = [f"{selected_agg}({col2}) AS {col2}" for col2 in selected_column]
+                        options_out  = str(options_out)
+                        options_out = options_out.replace("[","")
+                        options_out = options_out.replace("]","")
+                        options_out = options_out.replace("'","")
+
+                        output_query = f"SELECT {options_out} {from_qry} LIMIT 100  OFFSET 0;"
+                        st.code(output_query,language='sql')
+                        cursor.execute(output_query)
+                        rows = cursor.fetchall()
+                        st.write(f":green[Showing data from {tables[0]} table]")
+                        st.write(pd.DataFrame(rows, columns=[f"{options_out}"][0].split(",")))
             disconnect_button = st.button("disConnect")
             if disconnect_button:
                 query='DROP TABLE my_table;'

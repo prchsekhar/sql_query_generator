@@ -84,8 +84,8 @@ def show_tables(connection,message,selected_db):
 
 def show_data(cursor,selected_table,tables):
     if selected_table in tables:
-        cursor.execute(f"SELECT * FROM {selected_table};")
-        st.write(f"SELECT * FROM {selected_table};")
+        cursor.execute(f"SELECT * FROM {selected_table} LIMIT 10;")
+        st.code(f'SELECT * FROM {selected_table};',language='sql')
         rows = cursor.fetchall()
         col_names = [desc[0] for desc in cursor.description]
         st.write(pd.DataFrame(rows, columns=col_names).head())
