@@ -5,6 +5,7 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 
+# Function to establish a MySQL connection
 def connect_mysql(host, port, db_name, username, password):
     try:
         connection = mysql.connector.connect(
@@ -49,6 +50,7 @@ def connect_mssql(host, port, db_name, username, password):
     except Exception as e:
         return None, str(e)
     
+# Function to establish a SQLite connection   
 def connect_sqlite(dataframe):
     try:
         connection = sqlite3.connect('test.db')

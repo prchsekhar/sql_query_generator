@@ -6,10 +6,13 @@ from PIL import Image
 
 im = Image.open(r'D:\Raja\POC_1\3IINFOLTD.NS_BIG.png')
 st.set_page_config(page_title='3i future tech', layout='centered', page_icon =im , initial_sidebar_state = 'auto')
+
 def get_base64(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
     return base64.b64encode(data).decode()
+
+
 def set_background(png_file):
     bin_str = get_base64(png_file)
     page_bg_img = '''
@@ -21,8 +24,8 @@ def set_background(png_file):
     </style>
     ''' % bin_str
     st.markdown(page_bg_img, unsafe_allow_html=True)
-
 set_background(r'D:\Raja\POC_1\back3.jpg')
+
 Image = Image.open(r'D:\Raja\POC_1\3i-logo-black-bkg-1.png')
 st.image(Image)
 
@@ -38,7 +41,7 @@ def main():
         "Excel": connect_sqlite
     }
 
-    # Create a dictionary to map the aggregation functions to their corresponding SQL queries
+    # Create a list to map the aggregation functions to their corresponding SQL queries
     agg_options = ["GROUP BY", "COUNT", "SUM", "DISTINCT", "MIN", "MAX", "AVG","OUR CHOICE"]
        
     # Create the Streamlit app layout
