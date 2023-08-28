@@ -93,6 +93,11 @@ def show_data(cursor,selected_table,tables):
         st.write(pd.DataFrame(rows, columns=col_names).head())
     return col_names
 
+def show_column(cursor,selected_table,tables):
+    if selected_table in tables:
+        cursor.execute(f"SELECT * FROM {selected_table} LIMIT 10;")
+        col_names = [desc[0] for desc in cursor.description]
+    return col_names
 
 def list_convertin(selected_columns):
     selected_columns_out = str(selected_columns)
@@ -121,3 +126,46 @@ def user_query_fun(cursor,tables):
     column_name =  [col[0] for col in cursor.description]
     st.write(pd.DataFrame(rows,columns=column_name))
 
+def add_metric_fun(cursor,sql_query,matric_column_name,selected_table,data_type,connection):
+    matric_query =f'''alter table {selected_table} add column {matric_column_name} {data_type} GENERATED ALWAYS AS (
+	        {sql_query}
+            ) STORED;'''
+    cursor.execute(matric_query)
+    connection.commit()
+    st.write(f":green[Showing data from {selected_table} table]")
+    cursor.execute(f'select * from {selected_table}')
+    rows = cursor.fetchall()
+    column_name =  [col[0] for col in cursor.description]
+    st.write(pd.DataFrame(rows,columns=column_name))
+
+def join_metric_fun(cursor,right_table,left_table,join,right_selected_columns,left_selected_columns,right_condition_column,left_condition_column):
+    right_result_list = [f"{right_table}.{column}" for column in right_selected_columns]
+    left_result_list =  [f"{left_table}.{column}" for column in left_selected_columns]
+    join_query =f'''SELECT {list_convertin(right_result_list)},{list_convertin(left_result_list)} 
+    FROM {right_table} {join} {left_table} 
+    ON {right_table}.{right_condition_column} = {left_table}.{left_condition_column};
+    '''
+    st.code(join_query,language='sql')
+    cursor.execute(join_query)
+    st.write(f":green[output of join query]")
+    rows = cursor.fetchall()
+    if right_selected_columns[0]=='*' and left_selected_columns[0]!='*':
+        cursor.execute(f"SELECT * FROM {right_table} LIMIT 1;")
+        col_names = [desc[0] for desc in cursor.description]
+        right_result_list = [f"{right_table}.{column}" for column in col_names]
+        st.write(pd.DataFrame(rows,columns=right_result_list+left_result_list))
+    elif right_selected_columns[0]=='*' and left_selected_columns[0]=='*':
+        cursor.execute(f"SELECT * FROM {left_table} LIMIT 1;")
+        col_names = [desc[0] for desc in cursor.description]
+        left_result_list = [f"{left_table}.{column}" for column in col_names]
+        cursor.execute(f"SELECT * FROM {right_table} LIMIT 1;")
+        col_names = [desc[0] for desc in cursor.description]
+        right_result_list = [f"{right_table}.{column}" for column in col_names]
+        st.write(pd.DataFrame(rows,columns=right_result_list+left_result_list))
+    elif left_selected_columns[0]=="*"and right_selected_columns[0]!='*':
+        cursor.execute(f"SELECT * FROM {left_table} LIMIT 1;")
+        col_names = [desc[0] for desc in cursor.description]
+        left_result_list = [f"{left_table}.{column}" for column in col_names]
+        st.write(pd.DataFrame(rows,columns=right_result_list+left_result_list))
+    else:
+        st.write(pd.DataFrame(rows,columns=right_result_list+left_result_list))
