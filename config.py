@@ -266,3 +266,13 @@ def join_metric_fun(cursor, right_table, left_table, join, right_selected_column
         # Display the DataFrame with original column names from both tables
         st.write(pd.DataFrame(rows, columns=right_result_list + left_result_list))
 
+# adding the new column to existing table
+def alter_function(cursor,connection,table_name,output):
+    query=f'''alter table {table_name} {output};'''    
+    cursor.execute(query)
+    connection.commit()
+
+def delete_function(cursor,connection,selected_table,selected_column):
+    query=f'''ALTER TABLE {selected_table} DROP COLUMN {selected_column};'''    
+    cursor.execute(query)
+    connection.commit()

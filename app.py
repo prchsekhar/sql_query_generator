@@ -40,7 +40,10 @@ def main():
         "Excel": connect_sqlite
     }
     # Create a list to map the aggregation functions to their corresponding SQL queries
-    agg_options = ["GROUP BY", "COUNT", "SUM", "DISTINCT", "MIN", "MAX", "AVG","OUR CHOICE"]    
+    agg_options = ["GROUP BY", "COUNT", "SUM", "DISTINCT", "MIN", "MAX", "AVG","OUR CHOICE"] 
+    #data type list   
+    column_type_list=['bigint','binary','bit','char','date','datetime','datetime2','datetimeoffset','decimal','float','geography','geometry','hierarchyid','image','int','money','nchar','ntext','numeric','nvarchar','real','smalldatetime','smallint','smallmoney','sql_variant','sysname','text','time','timestamp','tinyint','uniqueidentifier','varbinary','varchar','xml']
+    input_values={}
     # Create the Streamlit app layout
     st.title(":blue[Welcome to Data Engineer's world]:sunglasses:")  
     # Database selection
@@ -60,10 +63,10 @@ def main():
             connection, message = connect_func(host, port, db_name, username, password)
             cursor,tables = show_tables(connection,message,selected_db)          
             # Get user's selected action
-            selected_option = st.selectbox(":red[Select option]", ["Select option","Show tables", "Add your metrics","joins"])          
+            selected_option = st.selectbox(":red[Select option]", ["Select option","Show tables", "Add your metrics","joins","add column","delete column"])          
             if selected_option=="Select option":
                 st.write(":red[Please select an option]")     
-            if selected_option=="Add your metrics":
+            elif selected_option=="Add your metrics":
                 # Display a list of tables and allow the user to select one
                 selected_table = st.selectbox(":red[Select a table]",tables)             
                 if selected_table in tables:
@@ -84,7 +87,7 @@ def main():
                     data_type = st.text_area(":red[Enter data type (example: int or varchar(10))]")                 
                     if st.button('ADD Metric', type="primary"):
                         add_metric_fun(cursor,sql_query,matric_column_name,selected_table,data_type,connection)                      
-            if selected_option=="joins":
+            elif selected_option=="joins":
                 # Allow user to select right and left tables
                 right, left = st.columns(2)
                 with right:
@@ -117,8 +120,35 @@ def main():
                     if st.button('Join', type="primary"):
                         join_metric_fun(cursor, right_table, left_table, join, right_selected_columns,
                                         left_selected_columns, right_condition_column, left_condition_column)
-            
-            if selected_option=="Show tables":
+            elif selected_option=="add column":
+                selected_table = st.selectbox(":red[Select a table]", tables)   
+                col_names = show_data(cursor, selected_table, tables)            
+                n = st.number_input(":red[Enter the number of columns to create:]", min_value=1, step=1)
+                col1,col2=st.columns(2)
+                for i in range(n):
+                    with col1:
+                        input_values[f"column_name_{i+1}"] =st.text_input(f":red[Input for column {i+1} ]")
+                    with col2:
+                        input_values[f"column_type_{i+1}"]=st.selectbox(f":red[Input for column  type {i+1} ]",['select column type']+column_type_list)
+                output = ", ".join([f"ADD COLUMN {input_values[f'column_name_{i}']} {input_values[f'column_type_{i}']}" for i in range(1, len(input_values)//2 + 1)])
+                alter=st.button('alter the table',type='primary')
+                if alter:
+                    alter_function(cursor,connection,selected_table,output)
+                    st.success('added successfully')
+                else:
+                    st.warning("write column name and add")
+            elif selected_option=="delete column":
+                selected_table = st.selectbox(":red[Select a table]", tables)   
+                col_names = show_data(cursor, selected_table, tables) 
+                selected_column = st.selectbox(":red[Select a column]", ['select column']+col_names)
+                if selected_column in col_names:
+                    drop=st.button("delete",type='primary')
+                    if drop:
+                        delete_function(cursor,connection,selected_table,selected_column)
+                        st.success('delete successfully')
+                else:
+                    st.warning("select column")
+            elif selected_option=="Show tables":
                 selected_table = st.selectbox(":red[Select a table]", tables)               
                 if selected_table in tables:
                     # Display the data in the selected table
@@ -142,7 +172,6 @@ def main():
                         options_out = [f"{selected_agg}({col2}) AS {col2}" for col2 in selected_column]
                         options_out = list_convertin(options_out)
                         generate_query_fun(selected_agg, selected_table, cursor, options_out, metrics_out=None, groupby_col_out=None)
-                
                 else:
                     st.write(message)         
     elif selected_db == "Excel":
